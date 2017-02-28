@@ -54,7 +54,7 @@ public class CssCompressor {
             String terminator = m.group(1);     // ', " or empty (not quoted)
 
             if (terminator.length() == 0) {
-                 terminator = ")";
+                terminator = ")";
             }
 
             boolean foundTerminator = false;
@@ -266,7 +266,7 @@ public class CssCompressor {
         }
         m.appendTail(sb);
         css = sb.toString();
-    
+
         // lowercase some more common pseudo-elements
         sb = new StringBuffer();
         p = Pattern.compile("(?i):(active|after|before|checked|disabled|empty|enabled|first-(?:child|of-type)|focus|hover|last-(?:child|of-type)|link|only-(?:child|of-type)|root|:selection|target|visited)");
@@ -276,7 +276,7 @@ public class CssCompressor {
         }
         m.appendTail(sb);
         css = sb.toString();
-    
+
         // lowercase some more common functions
         sb = new StringBuffer();
         p = Pattern.compile("(?i):(lang|not|nth-child|nth-last-child|nth-last-of-type|nth-of-type|(?:-(?:moz|webkit)-)?any)\\(");
@@ -286,7 +286,7 @@ public class CssCompressor {
         }
         m.appendTail(sb);
         css = sb.toString();
-    
+
         // lower case some common function that can be values
         // NOTE: rgb() isn't useful as we replace with #hex later, as well as and() is already done for us right after this
         sb = new StringBuffer();
@@ -309,7 +309,7 @@ public class CssCompressor {
         css = css.replaceAll(";+}", "}");
 
         // Replace 0(px,em,%) with 0.
-        css = css.replaceAll("(?i)(^|[^0-9])(?:0?\\.)?0(?:px|em|%|in|cm|mm|pc|pt|ex|deg|g?rad|m?s|k?hz)", "$10");
+        css = css.replaceAll("([\\s:])(0)(px|em|%|in|cm|mm|pc|pt|ex)", "$1$2");
 
         // Replace 0 0 0 0; with 0.
         css = css.replaceAll(":0 0 0 0(;|})", ":0$1");
@@ -369,15 +369,15 @@ public class CssCompressor {
 
             sb.append(css.substring(index, m.start()));
 
-            boolean isFilter = (m.group(1) != null && !"".equals(m.group(1))); 
+            boolean isFilter = (m.group(1) != null && !"".equals(m.group(1)));
 
             if (isFilter) {
                 // Restore, as is. Compression will break filters
                 sb.append(m.group(1) + "#" + m.group(2) + m.group(3) + m.group(4) + m.group(5) + m.group(6) + m.group(7));
             } else {
                 if( m.group(2).equalsIgnoreCase(m.group(3)) &&
-                    m.group(4).equalsIgnoreCase(m.group(5)) &&
-                    m.group(6).equalsIgnoreCase(m.group(7))) {
+                        m.group(4).equalsIgnoreCase(m.group(5)) &&
+                        m.group(6).equalsIgnoreCase(m.group(7))) {
 
                     // #AABBCC pattern
                     sb.append("#" + (m.group(3) + m.group(5) + m.group(7)).toLowerCase());
@@ -458,6 +458,25 @@ public class CssCompressor {
         for(i = 0, max = preservedTokens.size(); i < max; i++) {
             css = css.replace("___YUICSSMIN_PRESERVED_TOKEN_" + i + "___", preservedTokens.get(i).toString());
         }
+
+        // Add spaces back in between operators for css calc function
+        // https://developer.mozilla.org/en-US/docs/Web/CSS/calc
+        // Added by Eric Arnol-Martin (earnolmartin@gmail.com)
+        sb = new StringBuffer();
+        p = Pattern.compile("calc\\([^\\)]*\\)");
+        m = p.matcher(css);
+        while (m.find()) {
+            String s = m.group();
+
+            s = s.replaceAll("(?<=[%|px|em|rem|vw|\\d]+)\\+", " + ");
+            s = s.replaceAll("(?<=[%|px|em|rem|vw|\\d]+)\\-", " - ");
+            s = s.replaceAll("(?<=[%|px|em|rem|vw|\\d]+)\\*", " * ");
+            s = s.replaceAll("(?<=[%|px|em|rem|vw|\\d]+)\\/", " / ");
+
+            m.appendReplacement(sb, s);
+        }
+        m.appendTail(sb);
+        css = sb.toString();
 
         // Trim the final string (for any leading or trailing white spaces)
         css = css.trim();
